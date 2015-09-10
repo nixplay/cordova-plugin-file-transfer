@@ -24,10 +24,10 @@
 /*global module, require*/
 
 var FTErr = require('./FileTransferError'),
-    ProgressEvent = require('org.apache.cordova.file.ProgressEvent'),
-    FileUploadResult = require('org.apache.cordova.file.FileUploadResult'),
-    FileProxy = require('org.apache.cordova.file.FileProxy'),
-    FileEntry = require('org.apache.cordova.file.FileEntry');
+    ProgressEvent = require('cordova-plugin-file.ProgressEvent'),
+    FileUploadResult = require('cordova-plugin-file.FileUploadResult'),
+    FileProxy = require('cordova-plugin-file.FileProxy'),
+    FileEntry = require('cordova-plugin-file.FileEntry');
 
 var appData = Windows.Storage.ApplicationData.current;
 
@@ -90,6 +90,9 @@ exec(win, fail, 'FileTransfer', 'upload',
             // Handle 'ms-appdata' scheme
             filePath = filePath.replace('ms-appdata:///local', appData.localFolder.path)
                                .replace('ms-appdata:///temp', appData.temporaryFolder.path);
+        } else if (filePath.indexOf('cdvfile://') === 0) {
+            filePath = filePath.replace('cdvfile://localhost/persistent', appData.localFolder.path)
+                               .replace('cdvfile://localhost/temporary', appData.temporaryFolder.path);
         }
         // normalize path separators
         filePath = cordovaPathToNative(filePath);
@@ -161,11 +164,18 @@ exec(win, fail, 'FileTransfer', 'upload',
                                 }
 
                                 var response = result.getResponseInformation();
-                                // creating a data reader, attached to response stream to get server's response
+                                var ftResult = new FileUploadResult(result.progress.bytesSent, response.statusCode, '');
+
+                                // if server's response doesn't contain any data, then resolve operation now
+                                if (result.progress.bytesReceived === 0) {
+                                    successCallback(ftResult);
+                                    return;
+                                }
+
+                                // otherwise create a data reader, attached to response stream to get server's response
                                 var reader = new Windows.Storage.Streams.DataReader(result.getResultStreamAt(0));
-                                reader.loadAsync(result.progress.bytesReceived).then(function(size) {
-                                    var responseText = reader.readString(size);
-                                    var ftResult = new FileUploadResult(size, response.statusCode, responseText);
+                                reader.loadAsync(result.progress.bytesReceived).then(function (size) {
+                                    ftResult.response = reader.readString(size);
                                     successCallback(ftResult);
                                     reader.close();
                                 });
@@ -252,6 +262,9 @@ exec(win, fail, 'FileTransfer', 'upload',
             // Handle 'ms-appdata' scheme
             target = target.replace('ms-appdata:///local', appData.localFolder.path)
                            .replace('ms-appdata:///temp', appData.temporaryFolder.path);
+        } else if (target.indexOf('cdvfile://') === 0) {
+            target = target.replace('cdvfile://localhost/persistent', appData.localFolder.path)
+                           .replace('cdvfile://localhost/temporary', appData.temporaryFolder.path);
         }
         target = cordovaPathToNative(target);
 
@@ -268,7 +281,7 @@ exec(win, fail, 'FileTransfer', 'upload',
         fileTransferOps[downloadId] = new FileTransferOperation(FileTransferOperation.PENDING, null);
 
         var downloadCallback = function(storageFolder) {
-            storageFolder.createFileAsync(fileName, Windows.Storage.CreationCollisionOption.generateUniqueName).then(function(storageFile) {
+            storageFolder.createFileAsync(fileName, Windows.Storage.CreationCollisionOption.replaceExisting).then(function(storageFile) {
 
                 // check if download isn't already cancelled
                 var downloadOp = fileTransferOps[downloadId];
@@ -312,7 +325,7 @@ exec(win, fail, 'FileTransfer', 'upload',
 
                     var nativeURI = storageFile.path.replace(appData.localFolder.path, 'ms-appdata:///local')
                         .replace(appData.temporaryFolder.path, 'ms-appdata:///temp')
-                        .replace('\\', '/');
+                        .replace(/\\/g, '/');
 
                     // Passing null as error callback here because downloaded file should exist in any case
                     // otherwise the error callback will be hit during file creation in another place
@@ -361,7 +374,9 @@ exec(win, fail, 'FileTransfer', 'upload',
                         total: evt.progress.totalBytesToReceive,
                         target: evt.resultFile
                     });
-                    progressEvent.lengthComputable = true;
+                    // when bytesReceived == 0, BackgroundDownloader has not yet differentiated whether it could get file length or not,
+                    // when totalBytesToReceive == 0, BackgroundDownloader is unable to get file length
+                    progressEvent.lengthComputable = (evt.progress.bytesReceived > 0) && (evt.progress.totalBytesToReceive > 0);
 
                     successCallback(progressEvent, { keepCallback: true });
                 });

@@ -157,3 +157,63 @@
 * Error callback should always be called with the FileTransferError object, and not just the code
 * windows: alias appData to Windows.Storage.ApplicationData.current
 * CB-8093 Fixes incorrect FileTransferError returned in case of download failure
+
+### 1.0.0 (Apr 15, 2015)
+* CB-8746 bumped version of file dependency
+* CB-8746 gave plugin major version bump
+* CB-8641 Fixed tests to pass on windows and wp8
+* CB-8583 Forces download to overwrite existing target file
+* CB-8589 Fixes upload failure when server's response doesn't contain any data
+* CB-8747 updated dependency, added peer dependency
+* CB-8683 changed plugin-id to pacakge-name
+* CB-8653 properly updated translated docs to use new id
+* CB-8653 updated translated docs to use new id
+* Use TRAVIS_BUILD_DIR, install paramedic by npm
+* CB-8653 Updated Readme
+* CB-8654 Note WP8 download requests caching in docs
+* CB-8590 (Windows) Fixed download.onprogress.lengthComputable
+* CB-8566 Integrate TravisCI
+* CB-8438 cordova-plugin-file-transfer documentation translation: cordova-plugin-file-transfer
+* CB-8538 Added package.json file
+* CB-8495 Fixed wp8 and wp81 test failures
+* CB-7957 Adds support for `browser` platform
+* CB-8429 Updated version and RELEASENOTES.md for release 0.5.0 (take 2)
+* Fixes typo, introduced in https://github.com/apache/cordova-plugin-file-transfer/commit/bc43b46
+* CB-8407 Use File proxy to construct valid FileEntry for download success callback
+* CB-8407 Removes excess path to native path conversion in download method
+* CB-8429 Updated version and RELEASENOTES.md for release 0.5.0
+* CB-7957 Adds support for `browser` platform
+* CB-8095 Fixes JSHint and formatting issues
+* CB-8095 Updates tests and documentation
+* CB-8095 Rewrite upload method to support progress events properly
+* android: Fix error reporting for unknown uri type on sourceUri instead of targetUri
+
+### 1.1.0 (May 06, 2015)
+* CB-8951 Fixed crash related to headers parsing on **wp8**
+* CB-8933 Increased download and upload test timeout
+* CB-6313 **wp8**: Extra boundary in upload
+* CB-8761 **wp8**: Copy cookies from WebBrowser
+
+### 1.2.0 (Jun 17, 2015)
+* CB-9128 cordova-plugin-file-transfer documentation translation: cordova-plugin-file-transfer
+* CB-6503: Null pointer check for headers in upload (This closes #27)
+* CB-6503: Allow payload content-types other than multipart/form-data to be used for upload
+* Fix NoSuchMethodException looking up cookies.
+* fix npm md issue
+* CB-8951 (wp8) Handle exceptions in download() and upload() again
+* [wp8] Relaxed engine version requirement, using reflection to see if methods are available
+* Check for the existence of Json.net assembly to determin how we deserialize our headers.
+* relax engine requirement to allow -dev versions
+* Remove verbose console log messages
+* fix bad commit (mine) for cordova-wp8@4.0.0 engine req
+* bump required cordova-wp8 version to 4.0.0
+* This closes #80, This closes #12
+* fix failing test resulting from overlapping async calls
+* CB-8721 Fixes incorrect headers and upload params parsing on wp8
+* Replace all slashes in windows path
+
+### 1.2.1 (Jul 7, 2015)
+* CB-9275 [WP8] Fix build failure on WP8 by using reflection to detect presence of JSON.NET based serialization        
+* Updated code per code review.                                                                                        
+* Updated documentation for browser                                                                                    
+* Added option to allow for passing cookies automatically in the browser                                               

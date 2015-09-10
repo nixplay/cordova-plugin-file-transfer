@@ -28,16 +28,19 @@
 exports.defineAutoTests = function () {
 
     // constants
-    var GRACE_TIME_DELTA = 300; // in milliseconds
+    var GRACE_TIME_DELTA = 600; // in milliseconds
     var DEFAULT_FILESYSTEM_SIZE = 1024*50; //filesystem size in bytes
     var UNKNOWN_HOST = "http://foobar.apache.org";
     var HEADERS_ECHO = "http://whatheaders.com"; // NOTE: this site is very useful!
+    var DOWNLOAD_TIMEOUT = 2 * 60 * 1000; // download tests sometimes need a higher timeout to complete successfully
+    var UPLOAD_TIMEOUT = 2 * 60 * 1000; // upload tests sometimes need a higher timeout to complete successfully
+    var ABORT_DELAY = 100; // for abort() tests
 
     // config for upload test server
     // NOTE:
     //      more info at https://github.com/apache/cordova-labs/tree/cordova-filetransfer
-    var SERVER                  = "http://cordova-filetransfer.jitsu.com";
-    var SERVER_WITH_CREDENTIALS = "http://cordova_user:cordova_password@cordova-filetransfer.jitsu.com";
+    var SERVER                  = "http://cordova-vm.apache.org:5000";
+    var SERVER_WITH_CREDENTIALS = "http://cordova_user:cordova_password@cordova-vm.apache.org:5000";
 
     // flags
     var isWindows = cordova.platformId === 'windows8' || cordova.platformId === 'windows';
@@ -111,7 +114,6 @@ exports.defineAutoTests = function () {
                 function (fileEntry) {
                     fileEntry.remove(
                         function () {
-                            console.log('deleted \'' + name + '\'');
                             done();
                         },
                         function () {
@@ -120,7 +122,6 @@ exports.defineAutoTests = function () {
                     );
                 },
                 function () {
-                    console.log('no \'' + name + '\' to delete; skipping deletion');
                     done();
                 }
             );
@@ -132,7 +133,6 @@ exports.defineAutoTests = function () {
                     fileEntry.createWriter(function (writer) {
 
                         writer.onwrite = function () {
-                            console.log('created test file \'' + name + '\'');
                             success(fileEntry);
                         };
 
@@ -305,7 +305,7 @@ exports.defineAutoTests = function () {
             //         - 'httpssss://example.com'
             //         - 'apache.org', with subdomains="true"
             //         - 'cordova-filetransfer.jitsu.com'
-            describe('download', function() {
+            describe('download', function () {
 
                 // helpers
                 var verifyDownload = function (fileEntry) {
@@ -314,6 +314,10 @@ exports.defineAutoTests = function () {
 
                 // delete the downloaded file
                 afterEach(function (done) {
+                    deleteFile(root, fileName, done);
+                });
+
+                it('ensures that test file does not exist', function (done) {
                     deleteFile(root, fileName, done);
                 });
 
@@ -342,7 +346,7 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.download(fileURL, localFilePath, downloadWin, unexpectedCallbacks.httpFail);
-                });
+                }, DOWNLOAD_TIMEOUT);
 
                 it('filetransfer.spec.5 should download a file using http basic auth', function (done) {
 
@@ -354,7 +358,7 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.download(fileURL, localFilePath, downloadWin, unexpectedCallbacks.httpFail);
-                });
+                }, DOWNLOAD_TIMEOUT);
 
                 it('filetransfer.spec.6 should get 401 status on http basic auth failure', function (done) {
 
@@ -368,8 +372,13 @@ exports.defineAutoTests = function () {
                         done();
                     };
 
-                    transfer.download(fileURL, localFilePath, unexpectedCallbacks.httpWin, downloadFail);
-                });
+                    transfer.download(fileURL, localFilePath, unexpectedCallbacks.httpWin, downloadFail, null,
+                        {
+                            headers: {
+                                'If-Modified-Since': 'Thu, 19 Mar 2015 00:00:00 GMT'
+                            }
+                        });
+                }, DOWNLOAD_TIMEOUT);
 
                 it("filetransfer.spec.7 should download a file using file:// (when hosted from file://)", function (done) {
 
@@ -394,7 +403,7 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.download(fileURL, localFilePath, downloadWin, unexpectedCallbacks.httpFail);
-                });
+                }, DOWNLOAD_TIMEOUT);
 
                 it("filetransfer.spec.8 should download a file using https://", function (done) {
 
@@ -419,15 +428,17 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.download(fileURL, localFilePath, downloadWin, unexpectedCallbacks.httpFail);
-                });
+                }, DOWNLOAD_TIMEOUT);
 
                 it("filetransfer.spec.11 should call the error callback on abort()", function (done) {
 
                     var fileURL = 'http://cordova.apache.org/downloads/BlueZedEx.mp3';
 
                     transfer.download(fileURL, localFilePath, unexpectedCallbacks.httpWin, done);
-                    transfer.abort();
-                });
+                    setTimeout(function() {
+                        transfer.abort();
+                    }, ABORT_DELAY);
+                }, DOWNLOAD_TIMEOUT);
 
                 it("filetransfer.spec.9 should not leave partial file due to abort", function (done) {
 
@@ -452,7 +463,7 @@ exports.defineAutoTests = function () {
                     spyOn(transfer, 'onprogress').and.callThrough();
 
                     transfer.download(fileURL, localFilePath, unexpectedCallbacks.httpWin, downloadFail);
-                });
+                }, DOWNLOAD_TIMEOUT);
 
                 it("filetransfer.spec.10 should be stopped by abort() right away", function (done) {
 
@@ -472,13 +483,15 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.download(fileURL, localFilePath, unexpectedCallbacks.httpWin, downloadFail);
-                    transfer.abort();
+                    setTimeout(function() {
+                        transfer.abort();
+                    }, ABORT_DELAY);
 
                     // call abort() again, after a time greater than the grace period
                     setTimeout(function () {
                         expect(transfer.abort).not.toThrow();
                     }, GRACE_TIME_DELTA);
-                });
+                }, DOWNLOAD_TIMEOUT);
 
                 it("filetransfer.spec.12 should get http status on failure", function (done) {
 
@@ -493,7 +506,7 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.download(fileURL, localFilePath, unexpectedCallbacks.httpWin, downloadFail);
-                });
+                }, DOWNLOAD_TIMEOUT);
 
                 it("filetransfer.spec.13 should get http body on failure", function (done) {
 
@@ -511,7 +524,7 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.download(fileURL, localFilePath, unexpectedCallbacks.httpWin, downloadFail);
-                });
+                }, DOWNLOAD_TIMEOUT);
 
                 it("filetransfer.spec.14 should handle malformed urls", function (done) {
 
@@ -531,33 +544,19 @@ exports.defineAutoTests = function () {
                     transfer.download(fileURL, localFilePath, unexpectedCallbacks.httpWin, downloadFail);
                 });
 
-                describe('unknown host:', function () {
-                    var originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
+                it("filetransfer.spec.15 should handle unknown host", function (done) {
+                    var fileURL = UNKNOWN_HOST;
 
-                    beforeEach(function() {
-                        jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
-                    });
+                    var downloadFail = function (error) {
+                        expect(error.code).toBe(FileTransferError.CONNECTION_ERR);
+                        done();
+                    };
 
-                    afterEach(function() {
-                        jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
-                    });
+                    // turn off the onprogress handler
+                    transfer.onprogress = function () {};
 
-                    it("filetransfer.spec.15 should handle unknown host", function (done) {
-
-                        var fileURL = UNKNOWN_HOST;
-
-                        var downloadFail = function (error) {
-                            expect(error.code).toBe(FileTransferError.CONNECTION_ERR);
-                            done();
-                        };
-
-                        // turn off the onprogress handler
-                        transfer.onprogress = function () {};
-
-                        transfer.download(fileURL, localFilePath, unexpectedCallbacks.httpWin, downloadFail);
-                    });                    
-                });
-                
+                    transfer.download(fileURL, localFilePath, unexpectedCallbacks.httpWin, downloadFail);
+                }, 30000);
 
                 it("filetransfer.spec.16 should handle bad file path", function (done) {
                     var fileURL = SERVER;
@@ -580,7 +579,7 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.download(fileURL, localFilePath, downloadWin, unexpectedCallbacks.httpFail);
-                });
+                }, DOWNLOAD_TIMEOUT);
 
                 it("filetransfer.spec.30 downloaded file entries should have a toNativeURL method", function (done) {
 
@@ -613,7 +612,7 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.download(fileURL, localFilePath, downloadWin, unexpectedCallbacks.httpFail);
-                });
+                }, DOWNLOAD_TIMEOUT);
 
                 it("filetransfer.spec.28 (compatibility) should be able to download a file using local paths", function (done) {
 
@@ -721,7 +720,7 @@ exports.defineAutoTests = function () {
 
                     // NOTE: removing uploadOptions cause Android to timeout
                     transfer.upload(localFilePath, fileURL, uploadWin, unexpectedCallbacks.httpFail, uploadOptions);
-                });
+                }, UPLOAD_TIMEOUT);
 
                 it("filetransfer.spec.19 should be able to upload a file with http basic auth", function (done) {
 
@@ -734,7 +733,7 @@ exports.defineAutoTests = function () {
 
                     // NOTE: removing uploadOptions cause Android to timeout
                     transfer.upload(localFilePath, fileURL, uploadWin, unexpectedCallbacks.httpFail, uploadOptions);
-                });
+                }, UPLOAD_TIMEOUT);
 
                 it("filetransfer.spec.21 should be stopped by abort() right away", function (done) {
 
@@ -757,15 +756,17 @@ exports.defineAutoTests = function () {
 
                         // NOTE: removing uploadOptions cause Android to timeout
                         transfer.upload(localFilePath, fileURL, unexpectedCallbacks.httpWin, uploadFail, uploadOptions);
-                        transfer.abort();
+                        setTimeout(function() {
+                            transfer.abort();
+                        }, ABORT_DELAY);
 
                         setTimeout(function () {
                             expect(transfer.abort).not.toThrow();
                         }, GRACE_TIME_DELTA);
                     };
 
-                    writeFile(root, fileName, new Array(10000).join('aborttest!'), fileWin);
-                });
+                    writeFile(root, fileName, new Array(100000).join('aborttest!'), fileWin);
+                }, UPLOAD_TIMEOUT);
 
                 it("filetransfer.spec.22 should get http status and body on failure", function (done) {
 
@@ -778,7 +779,7 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.upload(localFilePath, fileURL, unexpectedCallbacks.httpWin, uploadFail, uploadOptions);
-                });
+                }, UPLOAD_TIMEOUT);
 
                 it("filetransfer.spec.24 should handle malformed urls", function (done) {
 
@@ -804,7 +805,7 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.upload(localFilePath, fileURL, unexpectedCallbacks.httpWin, uploadFail, {});
-                });
+                }, 30000); // unknown host may need quite some time on some devices
 
                 it("filetransfer.spec.25 should handle missing file", function (done) {
 
@@ -817,7 +818,7 @@ exports.defineAutoTests = function () {
                     };
 
                     transfer.upload('does_not_exist.txt', fileURL, unexpectedCallbacks.httpWin, uploadFail);
-                });
+                }, UPLOAD_TIMEOUT);
 
                 it("filetransfer.spec.26 should handle bad file path", function (done) {
 
@@ -860,7 +861,7 @@ exports.defineAutoTests = function () {
 
                     // NOTE: removing uploadOptions cause Android to timeout
                     transfer.upload(localFilePath, fileURL, uploadWin, unexpectedCallbacks.httpFail, uploadOptions);
-                });
+                }, UPLOAD_TIMEOUT);
 
                 it("filetransfer.spec.29 (compatibility) should be able to upload a file using local paths", function (done) {
 
@@ -890,7 +891,7 @@ exports.defineAutoTests = function () {
                     cordova.exec(function (localPath) {
                         transfer.upload(localPath, fileURL, uploadWin, unexpectedCallbacks.httpFail, uploadOptions);
                     }, unsupported, 'File', '_getLocalFilesystemPath', [internalFilePath]);
-                });
+                }, UPLOAD_TIMEOUT);
             });
         });
     });
@@ -911,7 +912,7 @@ exports.defineManualTests = function (contentEl, createActionButton) {
 
     function downloadImg(source, urlFn, element, directory) {
         var filename = source.substring(source.lastIndexOf("/") + 1);
-        filename = directory + filename || filename;
+        filename = (directory || '') + filename;
         function download(fileSystem) {
             var ft = new FileTransfer();
             console.log("Starting download");
@@ -927,7 +928,7 @@ exports.defineManualTests = function (contentEl, createActionButton) {
         clearResults();
         window.requestFileSystem(LocalFileSystem.TEMPORARY, 0, function (fileSystem) {
             console.log("Checking for existing file");
-            if (directory !== undefined) {
+            if (typeof directory !== 'undefined') {
                 console.log("Checking for existing directory.");
                 fileSystem.root.getDirectory(directory, {}, function (dirEntry) {
                     dirEntry.removeRecursively(function () {
@@ -965,11 +966,11 @@ exports.defineManualTests = function (contentEl, createActionButton) {
         file_transfer_tests;
 
     createActionButton('Download and display img (cdvfile)', function () {
-        downloadImg(imageURL, function (entry) { return entry.toURL(); }, new Image());
+        downloadImg(imageURL, function (entry) { return entry.toInternalURL(); }, new Image());
     }, 'cdv_image');
 
     createActionButton('Download and display img (native)', function () {
-        downloadImg(imageURL, function (entry) { return entry.toNativeURL(); }, new Image());
+        downloadImg(imageURL, function (entry) { return entry.toURL(); }, new Image());
     }, 'native_image');
 
     createActionButton('Download to a non-existent dir (should work)', function () {
@@ -979,12 +980,12 @@ exports.defineManualTests = function (contentEl, createActionButton) {
     createActionButton('Download and play video (cdvfile)', function () {
         var videoElement = document.createElement('video');
         videoElement.controls = "controls";
-        downloadImg(videoURL, function (entry) { return entry.toURL(); }, videoElement);
+        downloadImg(videoURL, function (entry) { return entry.toInternalURL(); }, videoElement);
     }, 'cdv_video');
 
     createActionButton('Download and play video (native)', function () {
         var videoElement = document.createElement('video');
         videoElement.controls = "controls";
-        downloadImg(videoURL, function (entry) { return entry.toNativeURL(); }, videoElement);
+        downloadImg(videoURL, function (entry) { return entry.toURL(); }, videoElement);
     }, 'native_video');
 };
