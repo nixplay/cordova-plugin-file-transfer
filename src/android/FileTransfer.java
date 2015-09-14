@@ -65,7 +65,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
 // import android.webkit.CookieManager;
-import org.xwalk.core.internal.XWalkCookieManager;
+import org.xwalk.core.XWalkCookieManager;
 
 public class FileTransfer extends CordovaPlugin {
 
@@ -370,13 +370,13 @@ public class FileTransfer extends CordovaPlugin {
 
                     // Use a post method.
                     conn.setRequestMethod(httpMethod);
-                    
+
                     // if we specified a Content-Type header, don't do multipart form upload
                     boolean multipartFormUpload = (headers == null) || !headers.has("Content-Type");
                     if (multipartFormUpload) {
                         conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + BOUNDARY);
                     }
-                    
+
                     // Set the cookies on the response
                     String cookie = getCookies(target);
 
@@ -459,7 +459,7 @@ public class FileTransfer extends CordovaPlugin {
                         //We don't want to change encoding, we just want this to write for all Unicode.
                         sendStream.write(beforeDataBytes);
                         totalBytes += beforeDataBytes.length;
-    
+
                         // create a buffer of maximum size
                         int bytesAvailable = readResult.inputStream.available();
                         int bufferSize = Math.min(bytesAvailable, MAX_BUFFER_SIZE);
@@ -487,7 +487,7 @@ public class FileTransfer extends CordovaPlugin {
                             progressResult.setKeepCallback(true);
                             context.sendPluginResult(progressResult);
                         }
-    
+
                         // send multipart form data necessary after file data...
                         sendStream.write(tailParamsBytes);
                         totalBytes += tailParamsBytes.length;
