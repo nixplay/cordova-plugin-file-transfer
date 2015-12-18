@@ -588,8 +588,12 @@ static CFIndex WriteDataToStream(NSData* data, CFWriteStreamRef stream)
             [self.targetFileHandle closeFile];
             self.targetFileHandle = nil;
             DLog(@"File Transfer Download success");
-
-            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:[self.filePlugin makeEntryForURL:self.targetURL]];
+            NSNumber *orientation = [self.responseHeaders valueForKey: @"x-amz-meta-orientation"];
+            NSLog(@"Photo orientation:  %@", orientation);
+            NSMutableDictionary* downloadResult = [NSMutableDictionary dictionaryWithCapacity:2];
+            [downloadResult setObject:orientation forKey:@"orientation"];
+            [downloadResult setObject:[self.filePlugin makeEntryForURL:self.targetURL] forKey:@"result"];
+            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary: downloadResult];
         } else {
             downloadResponse = [[NSString alloc] initWithData:self.responseData encoding:NSUTF8StringEncoding];
             result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsDictionary:[command createFileTransferError:CONNECTION_ERR AndSource:source AndTarget:target AndHttpStatus:self.responseCode AndBody:downloadResponse]];

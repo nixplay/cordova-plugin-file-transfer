@@ -882,6 +882,7 @@ public class FileTransfer extends CordovaPlugin {
                     }
 
                     if (!cached) {
+                        int orientation = 1;
                         try {
                             synchronized (context) {
                                 if (context.aborted) {
@@ -904,6 +905,7 @@ public class FileTransfer extends CordovaPlugin {
                             }
                         } finally {
                             synchronized (context) {
+                                orientation = Integer.parseInt(context.connection.getHeaderField("x-amz-meta-orientation"));
                                 context.connection = null;
                             }
                             safeClose(inputStream);
@@ -935,9 +937,12 @@ public class FileTransfer extends CordovaPlugin {
                         context.targetFile = file;
                         FileUtils filePlugin = (FileUtils) pm.getPlugin("File");
                         if (filePlugin != null) {
+                            JSONObject res = new JSONObject();
                             JSONObject fileEntry = filePlugin.getEntryForFile(file);
+                            res.put("result", fileEntry);
+                            res.put("orientation", orientation);
                             if (fileEntry != null) {
-                                result = new PluginResult(PluginResult.Status.OK, fileEntry);
+                                result = new PluginResult(PluginResult.Status.OK, res);
                             } else {
                                 JSONObject error = createFileTransferError(CONNECTION_ERR, source, target, connection, null);
                                 Log.e(LOG_TAG, "File plugin cannot represent download path");

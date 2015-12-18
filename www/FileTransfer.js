@@ -193,7 +193,13 @@ FileTransfer.prototype.download = function(source, target, successCallback, erro
         headers = convertHeadersToArray(headers);
     }
 
-    var win = function(result) {
+    var win = function(downloadResult) {
+        var result = downloadResult;
+        if(downloadResult.orientation) {
+            result = downloadResult.result;
+        }
+        var orientation = downloadResult.orientation || 1;
+
         if (typeof result.lengthComputable != "undefined") {
             if (self.onprogress) {
                 return self.onprogress(newProgressEvent(result));
@@ -212,7 +218,7 @@ FileTransfer.prototype.download = function(source, target, successCallback, erro
             entry.fullPath = result.fullPath;
             entry.filesystem = new FileSystem(result.filesystemName || (result.filesystem == window.PERSISTENT ? 'persistent' : 'temporary'));
             entry.nativeURL = result.nativeURL;
-            successCallback(entry);
+            successCallback(entry, orientation);
         }
     };
 
