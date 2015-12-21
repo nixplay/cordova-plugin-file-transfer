@@ -905,8 +905,15 @@ public class FileTransfer extends CordovaPlugin {
                             }
                         } finally {
                             synchronized (context) {
-                                orientation = Integer.parseInt(context.connection.getHeaderField("x-amz-meta-orientation"));
-                                context.connection = null;
+                              String strOrientation = context.connection.getHeaderField("x-amz-meta-orientation");
+                              if(strOrientation != null) {
+                                try {
+                                  orientation = Integer.parseInt(strOrientation);
+                                } catch(Error err) {
+                                  orientation = 1;
+                                }
+                              }
+                              context.connection = null;
                             }
                             safeClose(inputStream);
                             safeClose(outputStream);
